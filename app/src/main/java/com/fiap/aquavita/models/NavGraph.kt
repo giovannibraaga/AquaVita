@@ -1,8 +1,11 @@
 package com.fiap.aquavita.models
 
+import android.content.Intent
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,38 +14,62 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Create
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import coil.compose.AsyncImage
 import com.fiap.aquavita.R
 import com.fiap.aquavita.ui.theme.AquaBlue
 import com.fiap.aquavita.ui.theme.Background
 import com.fiap.aquavita.ui.theme.Placeholder
 import com.fiap.aquavita.ui.theme.TextDefault
+import com.fiap.aquavita.ui.theme.TitleNews
 import com.fiap.aquavita.viewmodels.AuthViewModel
+import com.fiap.aquavita.viewmodels.HomeViewModel
 import com.fiap.aquavita.viewmodels.SignUpViewModel
 
 class NavGraph {
@@ -51,17 +78,24 @@ class NavGraph {
         val nav = rememberNavController()
         NavHost(nav, startDestination = "login") {
             composable("home")  { HomeScreen(nav) }
+            composable("dicas") { TipsScreen(nav) }
             composable("login") { LoginScreen(nav) }
+            composable("quiz") { QuizScreen() }
+            composable("map")  { MapScreen() }
             composable("signup"){ SignUpScreen(nav) }
         }
 
     }
 
     private @Composable
-    fun HomeScreen(nav: NavController, vm: AuthViewModel = viewModel()) {
-        Text("Home Screen")
+    fun QuizScreen() {
+        TODO("Not yet implemented")
     }
 
+    private @Composable
+    fun MapScreen() {
+        TODO("Not yet implemented")
+    }
 
     @Composable
     fun LoginScreen(nav: NavController, vm: AuthViewModel = viewModel()) {
@@ -326,4 +360,276 @@ class NavGraph {
         unfocusedBorderColor = Placeholder,
         cursorColor = AquaBlue
     )
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun HomeScreen(navController: NavController, vm: HomeViewModel = viewModel()) {
+
+        val ui = vm.uiState
+        val context = LocalContext.current
+
+        Scaffold(
+            topBar = {
+                TopAppBar(title = {
+                    Text("AquaVita", color = AquaBlue, fontWeight = FontWeight.Bold)
+                })
+            },
+            bottomBar = { AquaBottomBar(navController) }
+        ) { innerPadding ->
+
+            when {
+                ui.loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+                ui.error != null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(ui.error, color = Color(0xFFD32F2F))
+                }
+                else -> LazyColumn(
+                    contentPadding = innerPadding,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Background)
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    item {
+                        Text(
+                            "Notícias sobre Água",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                color = AquaBlue, fontWeight = FontWeight.Bold
+                            )
+                        )
+                        Spacer(Modifier.height(8.dp))
+                    }
+                    items(ui.articles, key = { it.url ?: it.title.hashCode() }) { art ->
+                        NewsCard(art) { url ->
+                            url?.let {
+                                val intent = Intent(Intent.ACTION_VIEW, it.toUri())
+                                context.startActivity(intent)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Composable
+    fun NewsCard(article: Article, onClick: (String?) -> Unit) {
+        Card(
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onClick(article.url) }
+        ) {
+            Column {
+                article.urlToImage?.let { url ->
+                    AsyncImage(
+                        model = url,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(140.dp)
+                    )
+                }
+                Column(Modifier.padding(16.dp)) {
+                    Text(
+                        article.title ?: "",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            color = TitleNews, fontWeight = FontWeight.Bold
+                        )
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        article.description ?: "",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextDefault,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    article.publishedAt?.let {
+                        val date = it.take(10)
+                        Text(date, style = MaterialTheme.typography.labelSmall, color = Placeholder)
+                    }
+                }
+            }
+        }
+    }
+
+    sealed class Tab(val route: String, val icon: ImageVector, val label: String) {
+        object Home  : Tab("home",  Icons.Default.Home,  "Início")
+        object Educa : Tab("dicas", Icons.Default.Create, "Dicas")
+        object Mapa  : Tab("map",   Icons.Default.Place, "Mapa de Ajuda")
+    }
+
+    @Composable
+    fun AquaBottomBar(nav: NavController) {
+        val tabs = listOf(Tab.Home, Tab.Educa, Tab.Mapa)
+        val dest by nav.currentBackStackEntryAsState()
+        val current = dest?.destination?.route
+
+        NavigationBar {
+            tabs.forEach { tab ->
+                NavigationBarItem(
+                    selected = current == tab.route,
+                    onClick = { nav.navigate(tab.route) { launchSingleTop = true } },
+                    icon = { Icon(tab.icon, null) },
+                    label = { Text(tab.label) },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = AquaBlue,
+                        selectedTextColor = AquaBlue
+                    )
+                )
+            }
+        }
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun TipsScreen(nav: NavController, vm: HomeViewModel = viewModel()) {
+        val ui = vm.uiState
+
+        val tips = listOf(
+            Tip(
+                title = "Reaproveitamento de Água",
+                body = "A água utilizada para lavar roupas pode ser reaproveitada para limpar calçadas e pisos, economizando até 45 % de consumo mensal."
+            ),
+            Tip(
+                title = "Banhos Conscientes",
+                body = "Reduzir o tempo de banho em 5 minutos gera economia de até 50 L por pessoa. Feche a torneira ao se ensaboar."
+            ),
+            Tip(
+                title = "Captação de Água da Chuva",
+                body = "Instalar um sistema de captação de água pluvial para regar plantas pode economizar 1 000 L mensais, além de diminuir a conta."
+            ),
+            Tip(
+                title = "Mantenha a torneira fechada ao ensaboar a louça",
+                body = "a economia é de 97 litros (casa) e 223 litros (apartamento). Faça o mesmo quando desfolhar verduras e hortaliças, descascar frutas e legumes, cortar aves, carnes, peixes etc."
+            ),
+            Tip(
+                title = "Ao lavar o carro, use um balde",
+                body = "em vez de mangueira, a economia é de 176 litros."
+            )
+        )
+
+        Scaffold(
+            topBar = {
+                TopAppBar(title = {
+                    Text("AquaVita", color = AquaBlue, fontWeight = FontWeight.Bold)
+                })
+            },
+            bottomBar = { AquaBottomBar(nav) }
+        ) { inner ->
+
+            when {
+                ui.loading -> Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(inner),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+
+                ui.error != null -> Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(inner),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(ui.error, color = Color(0xFFD32F2F))
+                        Spacer(Modifier.height(16.dp))
+                        Button(onClick = { vm.fetchNews() }) {
+                            Text("Tentar novamente")
+                        }
+                    }
+                }
+
+                else -> LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Background)
+                        .padding(inner)
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    item {
+                        Spacer(Modifier.height(4.dp))
+
+                        Text(
+                            "Educação Hídrica",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                color = AquaBlue,
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "Aprenda como preservar nosso recurso mais precioso com estas dicas importantes.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextDefault
+                        )
+                        Spacer(Modifier.height(8.dp))
+                    }
+
+                    items(tips) { tip ->
+                        TipCard(tip)
+                    }
+
+                    item {
+                        Spacer(Modifier.height(16.dp))
+                        Text(
+                            "Teste seus conhecimentos sobre preservação da água.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextDefault
+                        )
+                        Spacer(Modifier.height(12.dp))
+
+                        Button(
+                            onClick = { nav.navigate("quiz") },
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                        ) {
+                            Text("Iniciar Quiz")
+                        }
+                        Spacer(Modifier.height(24.dp))
+                    }
+                    }
+                }
+            }
+        }
+
+    data class Tip(val title: String, val body: String)
+
+    @Composable
+    fun TipCard(tip: Tip) {
+        Card(
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(Modifier.padding(16.dp)) {
+                Text(
+                    tip.title,
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        color = AquaBlue,
+                        fontWeight = FontWeight.Bold
+                    )
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    tip.body,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextDefault
+                )
+            }
+        }
+    }
 }

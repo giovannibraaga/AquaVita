@@ -60,6 +60,10 @@ dependencies {
     implementation (libs.ui)
     implementation (libs.material3)
     implementation (libs.androidx.navigation.compose)
+    implementation (libs.retrofit)
+    implementation (libs.converter.moshi)
+    implementation (libs.coil.compose)
+
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
