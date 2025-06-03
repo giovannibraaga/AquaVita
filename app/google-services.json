@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "56403565827",
+    "project_id": "aquavita-mvp-fiap",
+    "storage_bucket": "aquavita-mvp-fiap.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:56403565827:android:9e5771bb31e935ebd55d36",
+        "android_client_info": {
+          "package_name": "com.fiap.aquavita"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "56403565827-nbt1n2m9b4lhou139hdv989o5me2pb3f.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.fiap.aquavita",
+            "certificate_hash": "a0ce4d773589707652fe59d073da9746ecff4cb6"
+          }
+        },
+        {
+          "client_id": "56403565827-okoobcedrvnftedeci7m9nueu0cqu06h.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCp_hAx-iV_OxKiZXj5OJIrtCb5apxIERU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "56403565827-okoobcedrvnftedeci7m9nueu0cqu06h.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
