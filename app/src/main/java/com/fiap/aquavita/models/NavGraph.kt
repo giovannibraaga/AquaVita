@@ -1,6 +1,7 @@
 package com.fiap.aquavita.models
 
 import android.content.Intent
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -14,14 +15,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Create
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Button
@@ -35,6 +38,8 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -70,6 +75,7 @@ import com.fiap.aquavita.ui.theme.TextDefault
 import com.fiap.aquavita.ui.theme.TitleNews
 import com.fiap.aquavita.viewmodels.AuthViewModel
 import com.fiap.aquavita.viewmodels.HomeViewModel
+import com.fiap.aquavita.viewmodels.QuizViewModel
 import com.fiap.aquavita.viewmodels.SignUpViewModel
 
 class NavGraph {
@@ -80,16 +86,11 @@ class NavGraph {
             composable("home")  { HomeScreen(nav) }
             composable("dicas") { TipsScreen(nav) }
             composable("login") { LoginScreen(nav) }
-            composable("quiz") { QuizScreen() }
+            composable("quiz") { QuizScreen(nav) }
             composable("map")  { MapScreen() }
             composable("signup"){ SignUpScreen(nav) }
         }
 
-    }
-
-    private @Composable
-    fun QuizScreen() {
-        TODO("Not yet implemented")
     }
 
     private @Composable
@@ -460,7 +461,7 @@ class NavGraph {
 
     sealed class Tab(val route: String, val icon: ImageVector, val label: String) {
         object Home  : Tab("home",  Icons.Default.Home,  "Início")
-        object Educa : Tab("dicas", Icons.Default.Create, "Dicas")
+        object Educa : Tab("dicas", Icons.Default.Check, "Dicas")
         object Mapa  : Tab("map",   Icons.Default.Place, "Mapa de Ajuda")
     }
 
@@ -632,4 +633,163 @@ class NavGraph {
             }
         }
     }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun QuizScreen(nav: NavController, vm: QuizViewModel = viewModel()) {
+
+        val answers = vm.answers                      // observar recomposição
+        val context = LocalContext.current
+
+        Scaffold(
+            topBar = {
+                TopAppBar(title = {
+                    Text("AquaVita", color = AquaBlue, fontWeight = FontWeight.Bold)
+                })
+            },
+            bottomBar = { AquaBottomBar(nav) }
+        ) { inner ->
+
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Background)
+                    .padding(inner)
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+
+                /* Cabeçalho */
+                item {
+                    Text(
+                        "Quiz da Água",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            color = AquaBlue, fontWeight = FontWeight.Bold
+                        )
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "Teste seus conhecimentos sobre preservação da água",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextDefault
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
+
+                /* Perguntas */
+                itemsIndexed(vm.questions) { idx, q ->
+                    QuestionCard(
+                        question = q,
+                        index = idx,
+                        total = vm.questions.size,
+                        selected = answers[idx],
+                        onSelect = { vm.selectAnswer(idx, it) }
+                    )
+                }
+
+                /* Botão Finalizar */
+                item {
+                    Spacer(Modifier.height(8.dp))
+                    Button(
+                        onClick = {
+                            val correct = vm.questions.indices.count { i ->
+                                vm.answers[i] == vm.questions[i].correct
+                            }
+                            Toast
+                                .makeText(context,
+                                    "Você acertou $correct de ${vm.questions.size}!",
+                                    Toast.LENGTH_LONG)
+                                .show()
+                            nav.popBackStack()       // volta para Educação
+                        },
+                        enabled = vm.isQuizFinished,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                    ) {
+                        Text("Finalizar Quiz")
+                    }
+                    Spacer(Modifier.height(24.dp))
+                }
+            }
+        }
+    }
+
+    @Composable
+    fun QuestionCard(
+        question: QuizQuestion,
+        index: Int,
+        total: Int,
+        selected: Boolean?,
+        onSelect: (Boolean) -> Unit
+    ) {
+        Card(shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp)) {
+
+                /* Cabeçalho “Questão 1/5” */
+                Text(
+                    "Questão ${index + 1}/$total",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = AquaBlue
+                )
+                Spacer(Modifier.height(4.dp))
+
+                /* Enunciado */
+                Text(
+                    question.statement,
+                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                    color = TextDefault
+                )
+                Spacer(Modifier.height(12.dp))
+
+                /* Opções se ainda não respondeu */
+                if (selected == null) {
+                    OptionRow("Verdadeiro") { onSelect(true) }
+                    Spacer(Modifier.height(8.dp))
+                    OptionRow("Falso")      { onSelect(false) }
+                } else {
+                    /* Mostrar feedback */
+                    val isCorrect = selected == question.correct
+                    val bg = if (isCorrect) Color(0xFFCCF4E5) else AquaBlue.copy(alpha = 0.2f)
+                    val txt = if (isCorrect) Color(0xFF065F46) else Color(0xFF003D52)
+
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .background(bg, RoundedCornerShape(8.dp))
+                            .padding(12.dp)
+                    ) {
+                        Text(
+                            text = if (isCorrect) "Resposta: Correta" else "Resposta: Falso",
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                            color = txt
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(question.explanation, style = MaterialTheme.typography.bodySmall, color = TextDefault)
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun OptionRow(text: String, onClick: () -> Unit) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .background(Color(0xFFF8FAFC), RoundedCornerShape(8.dp))
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            RadioButton(selected = false, onClick = onClick, colors = RadioButtonDefaults.colors(
+                unselectedColor = Placeholder, selectedColor = AquaBlue
+            ))
+            Spacer(Modifier.width(6.dp))
+            Text(text, color = TextDefault)
+        }
+    }
+
+
 }

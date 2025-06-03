@@ -6,7 +6,7 @@ import retrofit2.http.GET
 import retrofit2.http.Query
 
 private const val BASE_QUERY =
-    "(\"secas prolongadas\"OR seca OR estiagem OR \"crise hídrica\" OR \"racionamento de água\" " +
+    "(\"secas prolongadas\" OR seca OR estiagem OR \"crise hídrica\" OR \"racionamento de água\" " +
             "OR \"uso consciente da água\" OR \"economia de água\")"
 
 interface NewsService {
