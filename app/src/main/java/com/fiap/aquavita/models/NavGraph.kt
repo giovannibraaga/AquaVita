@@ -21,15 +21,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -124,67 +123,43 @@ class NavGraph {
         val mapView = rememberMapLibreViewWithLifecycle()
         var symbolMgr by remember { mutableStateOf<SymbolManager?>(null) }
         val context = LocalContext.current
+        val iconName = "help-icon"          // troque depois por "gps_icon"
 
         Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text("AquaVita", color = AquaBlue, fontWeight = FontWeight.Bold) }
-                )
-            },
+            topBar = { TopAppBar(title = { Text("AquaVita", color = AquaBlue, fontWeight = FontWeight.Bold) }) },
             bottomBar = { AquaBottomBar(nav) }
-        ) { innerPadding ->
+        ) { inner ->
 
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-            ) {
+            Box(Modifier.fillMaxSize().padding(inner)) {
 
-                /* ---------- MAPA ---------- */
-                AndroidView(
-                    factory = { mapView }
-                ) { mv ->
-                    // API ≥11 → getMapboxMap; ≤10 → getMapAsync (ajuste conforme sua lib).
+                AndroidView(factory = { mapView }) { mv ->
                     mv.getMapAsync { map ->
-
                         map.setStyle("https://demotiles.maplibre.org/style.json") { style ->
 
-                            try {
-                                // Tenta adicionar o ícone do marcador
+                            // 1. Ícone (use “marker-15” p/ testar rapidamente)
+                            if (style.getImage(iconName) == null) {
                                 style.addImage(
-                                    "plus-icon",
-                                    BitmapFactory.decodeResource(
-                                        context.resources,
-                                        R.drawable.baked_goods_1   //  ✓ certifique-se de existir
-                                    ),
-                                    false  // sdf parameter (signed distance field)
+                                    iconName,
+                                    BitmapFactory.decodeResource(context.resources, R.drawable.gps_icon), // ou gps_icon_image_background
+                                    false
                                 )
-                            } catch (e: Exception) {
-                                // Ignora erro caso o ícone já exista
-                                e.printStackTrace()
                             }
 
-                            // Cria / recreia SymbolManager
+                            // 2. SymbolManager
                             symbolMgr = SymbolManager(mv, map, style).apply {
                                 iconAllowOverlap = true
                                 iconIgnorePlacement = true
                             }
 
-                            // Leva a câmera para o BR no 1º item
-                            vm.points.firstOrNull()?.let { p ->
-                                map.moveCamera(
-                                    newLatLngZoom(LatLng(p.lat, p.lon), 3.5)
-                                )
+                            // 3. Câmera inicial
+                            vm.points.firstOrNull()?.let { first ->
+                                map.moveCamera(newLatLngZoom(LatLng(first.lat, first.lon), 4.5))
                             }
 
-                            // Clique no símbolo → seleciona item
+                            // 4. Click → seleciona
                             symbolMgr?.addClickListener { sym ->
-                                sym.data?.asString?.let { idStr ->
-                                    // Convert the String id to Long before comparison
-                                    val idLong = idStr.toLongOrNull()
-                                    if (idLong != null) {
-                                        selected = vm.points.firstOrNull { it.id == idLong }
-                                    }
+                                sym.data?.asString?.toLongOrNull()?.let { id ->
+                                    selected = vm.points.firstOrNull { it.id == id }
                                 }
                                 true
                             }
@@ -192,93 +167,62 @@ class NavGraph {
                     }
                 }
 
-                /* ---------- (Re)cria marcadores sempre que a lista mudar ---------- */
-                LaunchedEffect(vm.points) {
-                    symbolMgr?.let { sm ->
-                        sm.deleteAll()
-                        vm.points.forEach { p ->
-                            sm.create(
-                                SymbolOptions()
-                                    .withLatLng(LatLng(p.lat, p.lon))
-                                    .withIconImage("plus-icon")
-                                    .withIconSize(0.5f)
-                                    .withData(JsonPrimitive(p.id))
-                            )
-                        }
+                /* ---------- (Re)cria marcadores ---------- */
+                LaunchedEffect(vm.points, symbolMgr) {         // << incluiu symbolMgr!
+                    val sm = symbolMgr ?: return@LaunchedEffect
+                    sm.deleteAll()
+                    vm.points.forEach { p ->
+                        sm.create(
+                            SymbolOptions()
+                                .withLatLng(LatLng(p.lat, p.lon))
+                                .withIconImage(iconName)       // "marker-15" para teste
+                                .withIconSize(0.07f)            // Valor menor para reduzir o tamanho do ícone
+                                .withData(JsonPrimitive(p.id.toString()))
+                        )
                     }
                 }
 
                 /* ---------- Legenda ---------- */
-                Column(
+                Row(
                     Modifier
                         .align(Alignment.TopStart)
-                        .padding(16.dp)
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            Modifier
-                                .size(8.dp)
-                                .background(Color.Red, CircleShape)
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            "Pontos de distribuição de água",
-                            style = MaterialTheme.typography.labelSmall
-                        )
-                    }
+                    Image(
+                        painter = painterResource(R.drawable.gps_icon),
+                        contentDescription = null,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text("Pontos de distribuição de água", style = MaterialTheme.typography.labelSmall)
                 }
 
-                /* ---------- Card inferior ---------- */
+                /* ---------- Sheet / card ---------- */
                 selected?.let { p ->
-                    Surface(
-                        tonalElevation = 4.dp,
-                        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .align(Alignment.BottomCenter)
-                    ) {
-                        Column(Modifier.padding(16.dp)) {
-                            Text(
-                                p.name,
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    color = AquaBlue,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            )
-                            Spacer(Modifier.height(6.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    Icons.Default.Place,
-                                    contentDescription = null,
-                                    tint = AquaBlue,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(Modifier.width(4.dp))
-                                Text("${p.neighborhood}, ${p.city}-${p.state}")
-                            }
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                "Ponto de distribuição de água potável para a comunidade.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextDefault
-                            )
-                            Spacer(Modifier.height(8.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    Icons.Default.Add,
-                                    contentDescription = null,
-                                    tint = AquaBlue,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(Modifier.width(4.dp))
-                                Text("${p.capacityLiters} L disponíveis", color = AquaBlue)
-                            }
-                        }
-                    }
+                    BottomSheetScaffold(        /* ou seu Surface anterior */
+                        sheetPeekHeight = 0.dp,
+                        sheetContent = TODO(),
+                        modifier = TODO(),
+                        scaffoldState = TODO(),
+                        sheetMaxWidth = TODO(),
+                        sheetShape = TODO(),
+                        sheetContainerColor = TODO(),
+                        sheetContentColor = TODO(),
+                        sheetTonalElevation = TODO(),
+                        sheetShadowElevation = TODO(),
+                        sheetDragHandle = TODO(),
+                        sheetSwipeEnabled = TODO(),
+                        topBar = TODO(),
+                        snackbarHost = TODO(),
+                        containerColor = TODO(),
+                        contentColor = TODO()
+                    ) { /* conteúdo omitido p/ foco no bug */ }
                 }
             }
         }
     }
+
 
 
     @Composable
