@@ -1,5 +1,7 @@
 # AquaVita
 
+<img src="https://github.com/user-attachments/assets/3759cb42-8642-4104-b95e-9cd68a0076be" alt="AquaVita-logo" width="250" height="250"/>
+
 ## Sobre o Projeto
 
 AquaVita é um aplicativo móvel dedicado à preservação e gestão consciente da água. Com o lema "Preservando o futuro, gota a gota", o aplicativo oferece informações sobre pontos de distribuição de água, notícias relevantes sobre o tema, dicas de preservação e conteúdo educativo.
@@ -31,7 +33,7 @@ AquaVita é um aplicativo móvel dedicado à preservação e gestão consciente 
 
 1. Clone o repositório:
 
-`git clone https://github.com/seu-usuario/aquavita.git`
+    `git clone https://github.com/seu-usuario/aquavita.git`
 
 2. Abra o projeto no Android Studio
 
@@ -53,20 +55,25 @@ AquaVita é um aplicativo móvel dedicado à preservação e gestão consciente 
 
 ## Screenshots
 
-- Home
-  ![Tela inicial do AquaVita](https://prnt.sc/gwvOYpnydU70)
+### Home
+  ![Home Screen](https://github.com/user-attachments/assets/9c829382-4931-4ba3-bc31-e030d7fc51c5)
 
-- Dicas
-  ![Dicas](https://prnt.sc/ncDHODgV8sN6)
 
-- Quiz
-  ![Quiz](https://prnt.sc/8ZwcSDRjbbOc)
+### Dicas
+  ![Dicas](https://github.com/user-attachments/assets/591d0105-309b-4a4c-aad8-64efeae3f9ee)
 
-- Mapa com zonas de ajuda
-  ![Mapa com zonas de ajuda](https://prnt.sc/P0Gib98f7n0Z)
 
-- Modal ao clicar na zona de ajuda
-  ![Modal ao clicar na zona de ajuda](https://prnt.sc/prbWU9qMIJ01)
+### Quiz
+![Quiz](https://github.com/user-attachments/assets/91ff381d-bbb5-45cf-a148-635b1bd69fa0)
+
+
+### Mapa com zonas de ajuda
+  ![Mapa com zonas de ajuda](https://github.com/user-attachments/assets/5cf4c701-6459-45f5-a6dc-9d7087717e28)
+
+
+### Modal ao clicar na zona de ajuda
+  ![Modal ao clicar na zona de ajuda](https://github.com/user-attachments/assets/4b7c9603-2599-4089-8b97-4513992026ac)
+
 
 ---
 
