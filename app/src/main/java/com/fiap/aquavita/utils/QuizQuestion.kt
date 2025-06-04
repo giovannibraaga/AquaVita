@@ -1,4 +1,4 @@
-package com.fiap.aquavita.models
+package com.fiap.aquavita.utils
 
 data class QuizQuestion(
     val statement: String,

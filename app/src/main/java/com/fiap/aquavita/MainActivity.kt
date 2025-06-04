@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import com.fiap.aquavita.models.NavGraph
+import com.fiap.aquavita.nav.NavGraph
 import com.fiap.aquavita.ui.theme.AquaVitaTheme
 import com.google.firebase.FirebaseApp
 import org.maplibre.android.MapLibre

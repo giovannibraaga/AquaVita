@@ -5,7 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
-import com.fiap.aquavita.models.QuizQuestion
+import com.fiap.aquavita.utils.QuizQuestion
 import javax.inject.Inject
 
 @SuppressLint("MutableCollectionMutableState")

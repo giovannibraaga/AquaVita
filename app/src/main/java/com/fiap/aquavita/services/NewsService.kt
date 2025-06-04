@@ -1,5 +1,6 @@
-package com.fiap.aquavita.models
+package com.fiap.aquavita.services
 
+import com.fiap.aquavita.models.NewsResponse
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
@@ -23,6 +24,6 @@ private const val NEWS_API_KEY = "5d74ee1f2b0e44068c2989c677e819ea"
 fun provideNewsService(): NewsService =
     Retrofit.Builder()
         .baseUrl("https://newsapi.org/")
-        .addConverterFactory(GsonConverterFactory.create())   // ✓ agora Gson
+        .addConverterFactory(GsonConverterFactory.create())
         .build()
         .create(NewsService::class.java)

@@ -6,7 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fiap.aquavita.models.Article
-import com.fiap.aquavita.models.provideNewsService
+import com.fiap.aquavita.services.provideNewsService
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
