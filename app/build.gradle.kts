@@ -60,10 +60,13 @@ dependencies {
     implementation (libs.ui)
     implementation (libs.material3)
     implementation (libs.androidx.navigation.compose)
-    implementation (libs.retrofit)
+    implementation (libs.retrofit.v290)
+    implementation ("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation (libs.retrofit.v290)
     implementation (libs.converter.moshi)
     implementation (libs.coil.compose)
-
+    implementation (libs.android.sdk)
+    implementation (libs.android.plugin.annotation.v9)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

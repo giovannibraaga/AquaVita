@@ -1,5 +1,6 @@
 package com.fiap.aquavita.viewmodels
 
+import android.annotation.SuppressLint
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -7,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import com.fiap.aquavita.models.QuizQuestion
 import javax.inject.Inject
 
+@SuppressLint("MutableCollectionMutableState")
 class QuizViewModel @Inject constructor() : ViewModel() {
 
     val questions = listOf(
@@ -37,7 +39,6 @@ class QuizViewModel @Inject constructor() : ViewModel() {
         )
     )
 
-    /** Índice -> resposta do usuário (null = não respondeu) */
     var answers by mutableStateOf(MutableList<Boolean?>(questions.size) { null })
         private set
 

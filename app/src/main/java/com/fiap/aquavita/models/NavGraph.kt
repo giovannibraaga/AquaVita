@@ -1,6 +1,7 @@
 package com.fiap.aquavita.models
 
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -20,10 +21,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Place
@@ -45,7 +48,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -59,7 +67,11 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
@@ -74,29 +86,227 @@ import com.fiap.aquavita.ui.theme.Placeholder
 import com.fiap.aquavita.ui.theme.TextDefault
 import com.fiap.aquavita.ui.theme.TitleNews
 import com.fiap.aquavita.viewmodels.AuthViewModel
+import com.fiap.aquavita.viewmodels.HelpPoint
 import com.fiap.aquavita.viewmodels.HomeViewModel
+import com.fiap.aquavita.viewmodels.MapViewModel
 import com.fiap.aquavita.viewmodels.QuizViewModel
 import com.fiap.aquavita.viewmodels.SignUpViewModel
+import com.google.gson.JsonPrimitive
+import org.maplibre.android.camera.CameraUpdateFactory.newLatLngZoom
+import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.maps.MapView
+import org.maplibre.android.plugins.annotation.SymbolManager
+import org.maplibre.android.plugins.annotation.SymbolOptions
 
 class NavGraph {
     @Composable
-    fun AquaVitaNav(startDestination: String = "login") {
+    fun AquaVitaNav() {
         val nav = rememberNavController()
         NavHost(nav, startDestination = "login") {
             composable("home")  { HomeScreen(nav) }
             composable("dicas") { TipsScreen(nav) }
             composable("login") { LoginScreen(nav) }
             composable("quiz") { QuizScreen(nav) }
-            composable("map")  { MapScreen() }
+            composable("map")  { MapScreen(nav) }
             composable("signup"){ SignUpScreen(nav) }
         }
 
     }
 
-    private @Composable
-    fun MapScreen() {
-        TODO("Not yet implemented")
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun MapScreen(
+        nav: NavController,
+        vm: MapViewModel = viewModel()
+    ) {
+        var selected by remember { mutableStateOf<HelpPoint?>(null) }
+        val mapView = rememberMapLibreViewWithLifecycle()
+        var symbolMgr by remember { mutableStateOf<SymbolManager?>(null) }
+        val context = LocalContext.current
+
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("AquaVita", color = AquaBlue, fontWeight = FontWeight.Bold) }
+                )
+            },
+            bottomBar = { AquaBottomBar(nav) }
+        ) { innerPadding ->
+
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+            ) {
+
+                /* ---------- MAPA ---------- */
+                AndroidView(
+                    factory = { mapView }
+                ) { mv ->
+                    // API ≥11 → getMapboxMap; ≤10 → getMapAsync (ajuste conforme sua lib).
+                    mv.getMapAsync { map ->
+
+                        map.setStyle("https://demotiles.maplibre.org/style.json") { style ->
+
+                            try {
+                                // Tenta adicionar o ícone do marcador
+                                style.addImage(
+                                    "plus-icon",
+                                    BitmapFactory.decodeResource(
+                                        context.resources,
+                                        R.drawable.baked_goods_1   //  ✓ certifique-se de existir
+                                    ),
+                                    false  // sdf parameter (signed distance field)
+                                )
+                            } catch (e: Exception) {
+                                // Ignora erro caso o ícone já exista
+                                e.printStackTrace()
+                            }
+
+                            // Cria / recreia SymbolManager
+                            symbolMgr = SymbolManager(mv, map, style).apply {
+                                iconAllowOverlap = true
+                                iconIgnorePlacement = true
+                            }
+
+                            // Leva a câmera para o BR no 1º item
+                            vm.points.firstOrNull()?.let { p ->
+                                map.moveCamera(
+                                    newLatLngZoom(LatLng(p.lat, p.lon), 3.5)
+                                )
+                            }
+
+                            // Clique no símbolo → seleciona item
+                            symbolMgr?.addClickListener { sym ->
+                                sym.data?.asString?.let { idStr ->
+                                    // Convert the String id to Long before comparison
+                                    val idLong = idStr.toLongOrNull()
+                                    if (idLong != null) {
+                                        selected = vm.points.firstOrNull { it.id == idLong }
+                                    }
+                                }
+                                true
+                            }
+                        }
+                    }
+                }
+
+                /* ---------- (Re)cria marcadores sempre que a lista mudar ---------- */
+                LaunchedEffect(vm.points) {
+                    symbolMgr?.let { sm ->
+                        sm.deleteAll()
+                        vm.points.forEach { p ->
+                            sm.create(
+                                SymbolOptions()
+                                    .withLatLng(LatLng(p.lat, p.lon))
+                                    .withIconImage("plus-icon")
+                                    .withIconSize(0.5f)
+                                    .withData(JsonPrimitive(p.id))
+                            )
+                        }
+                    }
+                }
+
+                /* ---------- Legenda ---------- */
+                Column(
+                    Modifier
+                        .align(Alignment.TopStart)
+                        .padding(16.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            Modifier
+                                .size(8.dp)
+                                .background(Color.Red, CircleShape)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            "Pontos de distribuição de água",
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                }
+
+                /* ---------- Card inferior ---------- */
+                selected?.let { p ->
+                    Surface(
+                        tonalElevation = 4.dp,
+                        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.BottomCenter)
+                    ) {
+                        Column(Modifier.padding(16.dp)) {
+                            Text(
+                                p.name,
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    color = AquaBlue,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.Place,
+                                    contentDescription = null,
+                                    tint = AquaBlue,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text("${p.neighborhood}, ${p.city}-${p.state}")
+                            }
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                "Ponto de distribuição de água potável para a comunidade.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextDefault
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.Add,
+                                    contentDescription = null,
+                                    tint = AquaBlue,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text("${p.capacityLiters} L disponíveis", color = AquaBlue)
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
+
+
+    @Composable
+    fun rememberMapLibreViewWithLifecycle(): MapView {
+        val context = LocalContext.current
+        val lifecycle = LocalLifecycleOwner.current.lifecycle
+
+        // Cria só uma vez e já chama onCreate.
+        val mapView = remember {
+            MapView(context).apply { onCreate(null) }
+        }
+
+        // Encaminha os eventos do ciclo de vida da activity/fragment.
+        DisposableEffect(lifecycle) {
+            val observer = object : DefaultLifecycleObserver {
+                override fun onStart(owner: LifecycleOwner)   = mapView.onStart()
+                override fun onResume(owner: LifecycleOwner)  = mapView.onResume()
+                override fun onPause(owner: LifecycleOwner)   = mapView.onPause()
+                override fun onStop(owner: LifecycleOwner)    = mapView.onStop()
+                override fun onDestroy(owner: LifecycleOwner) = mapView.onDestroy()
+            }
+            lifecycle.addObserver(observer)
+            onDispose { lifecycle.removeObserver(observer) }
+        }
+
+        return mapView
+    }
+
 
     @Composable
     fun LoginScreen(nav: NavController, vm: AuthViewModel = viewModel()) {
@@ -532,24 +742,6 @@ class NavGraph {
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()
-                }
-
-                ui.error != null -> Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(inner),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text(ui.error, color = Color(0xFFD32F2F))
-                        Spacer(Modifier.height(16.dp))
-                        Button(onClick = { vm.fetchNews() }) {
-                            Text("Tentar novamente")
-                        }
-                    }
                 }
 
                 else -> LazyColumn(

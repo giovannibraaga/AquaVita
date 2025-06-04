@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import com.fiap.aquavita.models.NavGraph
 import com.fiap.aquavita.ui.theme.AquaVitaTheme
 import com.google.firebase.FirebaseApp
+import org.maplibre.android.MapLibre
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -21,6 +22,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background ,
                 ) {
+                    MapLibre.getInstance(this)
                     NavGraph().AquaVitaNav()
                 }
             }
